@@ -1,6 +1,7 @@
 import React from "react";
 import produce from "immer";
 import { Card, Button } from "@material-ui/core";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import { useDropzone } from "react-dropzone";
 import EditableCell from "./EditableCell";
 
@@ -16,11 +17,54 @@ import Select from "@material-ui/core/Select";
 
 import "./App.css";
 
+const ServiceContext = React.createContext();
+
+const ServiceProvider = ({ children }) => {
+  const [columnMatchingData, setColumnMatchingData] = React.useState();
+  const [finalDataInit, setFinalData] = React.useState();
+  const [loading, setLoading] = React.useState(false);
+
+  return (
+    <ServiceContext.Provider
+      value={{
+        columnMatchingData,
+        setColumnMatchingData,
+        finalDataInit,
+        setFinalData,
+        loading,
+        setLoading
+      }}
+    >
+      {children}
+    </ServiceContext.Provider>
+  );
+};
+
 function UploadArea({ name, next }) {
-  const onDrop = React.useCallback(acceptedFiles => {
-    console.log(acceptedFiles);
-    next();
-  }, []);
+  const { setColumnMatchingData, setLoading } = React.useContext(
+    ServiceContext
+  );
+  const onDrop = React.useCallback(
+    acceptedFiles => {
+      setLoading(true);
+
+      const data = new FormData();
+      data.append("file", acceptedFiles[0]);
+      data.append("type", name);
+
+      fetch("http://localhost:5000/titles", {
+        method: "POST",
+        body: data
+      })
+        .then(response => response.text())
+        .then(body => {
+          setColumnMatchingData(body.replace(/\NaN/g, "null"));
+          next();
+          setLoading(false);
+        });
+    },
+    [name, next, setColumnMatchingData]
+  );
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
   return (
     <Card className="uploadRow">
@@ -38,21 +82,24 @@ function UploadArea({ name, next }) {
 }
 
 function FinalTable() {
+  const { finalDataInit } = React.useContext(ServiceContext);
+  console.log(finalDataInit);
   const [finalData, dispatch] = React.useReducer(
     (state, action) => produce(state, draft => {}),
-    [
-      {
-        "Numar Camere": { type: "validated", value: "4", originalValue: "4r" },
-        "Suprafata Utila": {
-          type: "validated",
-          value: "80mp",
-          originalValue: "80mp2"
-        },
-        Strada: { type: "invalid", value: "huk ja" },
-        Oras: { type: "correct", value: "Bucuresti" },
-        Etaj: { type: "correct", value: 5 }
-      }
-    ]
+    finalDataInit
+    // [
+    //   {
+    //     "Numar Camere": { type: "validated", value: "4", originalValue: "4r" },
+    //     "Suprafata Utila": {
+    //       type: "validated",
+    //       value: "80mp",
+    //       originalValue: "80mp2"
+    //     },
+    //     Strada: { type: "invalid", value: "huk ja" },
+    //     Oras: { type: "correct", value: "Bucuresti" },
+    //     Etaj: { type: "correct", value: 5 }
+    //   }
+    // ]
   );
 
   const columns = Object.keys(finalData[0]);
@@ -89,6 +136,10 @@ function FinalTable() {
 }
 
 function ColumnsCheckTable({ next }) {
+  const { setFinalData, columnMatchingData, setLoading } = React.useContext(
+    ServiceContext
+  );
+
   const [columnMatching, dispatch] = React.useReducer(
     (state, action) =>
       produce(state, draft => {
@@ -104,28 +155,7 @@ function ColumnsCheckTable({ next }) {
           default:
         }
       }),
-    {
-      actualColumns: {
-        "nr cam": [2, 3, 1, 2, 3],
-        "sup util": [50, 70, 30, 55, 77],
-        "str.ada": [
-          "Baciului",
-          "Ciocarliei",
-          "Adevarul",
-          "Vasile Milea",
-          "Paris"
-        ],
-        oras: ["Bucuresti", "Brasov", "Bucuresti", "Bucuresti", "Arad"]
-      },
-
-      results: {
-        "Numar Camere": { found: true, column: "nr cam" },
-        "Suprafata Utila": { found: true, column: "sup util" },
-        Strada: { found: true, column: "str.ada" },
-        Oras: { found: true, column: "oras" },
-        Etaj: { found: false, column: null }
-      }
-    }
+    JSON.parse(columnMatchingData)
   );
 
   const colums = Object.keys(columnMatching.results);
@@ -139,7 +169,7 @@ function ColumnsCheckTable({ next }) {
           <TableHead>
             <TableRow>
               {colums.map(rc => (
-                <TableCell>
+                <TableCell key={rc}>
                   {rc}
                   <br />
                   <Select
@@ -154,6 +184,7 @@ function ColumnsCheckTable({ next }) {
                   >
                     {actualColumns.map(c => (
                       <MenuItem
+                        key={c}
                         value={c}
                         selected={columnMatching.results[rc].column === c}
                       >
@@ -173,9 +204,9 @@ function ColumnsCheckTable({ next }) {
           </TableHead>
           <TableBody>
             {columnMatching.actualColumns[actualColumns[0]].map((_, idx) => (
-              <TableRow>
-                {colums.map(c => (
-                  <TableCell>
+              <TableRow key={idx}>
+                {colums.map((c, c_idx) => (
+                  <TableCell key={c_idx}>
                     {columnMatching.results[c].found &&
                       columnMatching.actualColumns[
                         columnMatching.results[c].column
@@ -188,7 +219,31 @@ function ColumnsCheckTable({ next }) {
         </Table>
       </TableContainer>
       <br />
-      <Button onClick={next}>Confirm Columns and Validate file</Button>
+      <Button
+        onClick={_ => {
+          setLoading(true);
+          const r = {};
+          Object.keys(columnMatching.results).forEach(
+            k => (r[k] = columnMatching.results[k].column)
+          );
+          fetch("http://localhost:5000/goodTitles", {
+            method: "POST",
+            body: JSON.stringify(r),
+            headers: {
+              "Content-Type": "application/json"
+            }
+          })
+            .then(res => res.text())
+            .then(body => {
+              console.log(body);
+              setFinalData(JSON.parse(body.replace(/\NaN/g, "null")));
+              next();
+              setLoading(false);
+            });
+        }}
+      >
+        Confirm Columns and Validate file
+      </Button>
     </div>
   );
 }
@@ -203,7 +258,8 @@ function UploadFileScreen({ next }) {
   );
 }
 
-function App() {
+function Router() {
+  const { loading } = React.useContext(ServiceContext);
   const [step, setStep] = React.useState(0);
   const next = () => setStep(step + 1);
   const stepScreen = [
@@ -211,8 +267,25 @@ function App() {
     <ColumnsCheckTable next={next} />,
     <FinalTable next={next} />
   ];
+  return (
+    <div className="App">
+      {loading ? (
+        <div className="progressWrapper">
+          <CircularProgress />{" "}
+        </div>
+      ) : (
+        stepScreen[step]
+      )}
+    </div>
+  );
+}
 
-  return <div className="App">{stepScreen[step]}</div>;
+function App() {
+  return (
+    <ServiceProvider>
+      <Router />
+    </ServiceProvider>
+  );
 }
 
 export default App;

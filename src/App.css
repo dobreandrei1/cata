@@ -31,3 +31,9 @@ td.validated {
 .wrapper {
   padding: 10px;
 }
+
+.progressWrapper {
+  padding: 100px;
+  margin: auto;
+  width: 100px;
+}
