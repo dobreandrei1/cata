@@ -9,7 +9,13 @@ function EditableCell({ value, onChange }) {
   return (
     <OutsideAlerter
       onOutSideClick={_ => {
-        setInputVisible(false);
+        if (inputVisible) {
+          setInputVisible(false);
+          // Delay parent update after this function render completes
+          setTimeout(_ => {
+            if (onChange !== undefined) onChange(localValue);
+          }, 0);
+        }
       }}
     >
       {!inputVisible ? (
@@ -22,12 +28,11 @@ function EditableCell({ value, onChange }) {
           {localValue ? localValue : "-"}
         </div>
       ) : (
-        <input
+        <textarea
           style={{ width: "100px" }}
           value={localValue}
           onChange={e => {
             setLocalValue(e.target.value);
-            if (onChange !== undefined) onChange(e.target.value);
           }}
         />
       )}
@@ -35,4 +40,7 @@ function EditableCell({ value, onChange }) {
   );
 }
 
-export default EditableCell;
+export default React.memo(
+  EditableCell,
+  (prev, next) => prev.value === next.value
+);
