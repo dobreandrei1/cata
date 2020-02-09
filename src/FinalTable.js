@@ -7,15 +7,20 @@ import {
   TableRow,
   TableBody,
   TableCell,
-  Paper,
-  Button
+  Paper
 } from "@material-ui/core";
 import EditableCell from "./EditableCell";
 import BootstrapTooltip from "./BootstrapTooltip";
+import ModalButton from "./ModalButton";
+import DownloadValidatedFile from "./DownloadValidatedFile";
+import ReportForm from "./ReportForm";
 import { ServiceContext } from "./DataService";
 
 function FinalTable() {
-  const { finalDataInit } = React.useContext(ServiceContext);
+  const { inputFile, columnMatchingData, finalDataInit } = React.useContext(
+    ServiceContext
+  );
+
   const columns = Object.keys(finalDataInit[0]);
   const [finalData, dispatch] = React.useReducer(
     (state, action) =>
@@ -41,7 +46,6 @@ function FinalTable() {
       }
     });
 
-  console.log("reredering");
   return (
     <div className="wrapper">
       <h2>Processed Data</h2>
@@ -49,14 +53,34 @@ function FinalTable() {
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
+              <TableCell>Actions</TableCell>
               {columns.map(c => (
-                <TableCell key={c}>{c}</TableCell>
+                <TableCell key={c}>
+                  <BootstrapTooltip
+                    title={
+                      columnMatchingData.results[c]
+                        ? columnMatchingData.results[c].column
+                        : "No Original Column"
+                    }
+                  >
+                    <span>{c}</span>
+                  </BootstrapTooltip>
+                </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {finalData.map((d, idx) => (
               <TableRow key={idx}>
+                <TableCell>
+                  <ModalButton width={400} title="Report">
+                    <ReportForm
+                      file={inputFile}
+                      row={d}
+                      matchingResults={columnMatchingData.results}
+                    />
+                  </ModalButton>
+                </TableCell>
                 {columns.map((c, idx_cell) => {
                   if (d[c].type === "validated") {
                     return (
@@ -89,43 +113,7 @@ function FinalTable() {
         </Table>
       </TableContainer>
       <br />
-      <Button
-        onClick={_ => {
-          const csv =
-            // "data:text/csv;charset=utf-8," +
-            columns.join(",") +
-            "\n" +
-            finalData
-              .map(r => columns.map(c => r[c].value).join(","))
-              .join("\n");
-          // console.log(csv);
-
-          // const encodedUri = encodeURI(csv);
-          // window.open(encodedUri);
-          var exportedFilenmae = "export.csv";
-
-          var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-          if (navigator.msSaveBlob) {
-            // IE 10+
-            navigator.msSaveBlob(blob, exportedFilenmae);
-          } else {
-            var link = document.createElement("a");
-            if (link.download !== undefined) {
-              // feature detection
-              // Browsers that support HTML5 download attribute
-              var url = URL.createObjectURL(blob);
-              link.setAttribute("href", url);
-              link.setAttribute("download", exportedFilenmae);
-              link.style.visibility = "hidden";
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }
-          }
-        }}
-      >
-        Download Validated File
-      </Button>
+      <DownloadValidatedFile columns={columns} finalData={finalData} />
     </div>
   );
 }

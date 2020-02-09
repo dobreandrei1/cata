@@ -6,6 +6,7 @@ const ServiceProvider = ({ children }) => {
   const [columnMatchingData, setColumnMatchingData] = React.useState();
   const [finalDataInit, setFinalData] = React.useState();
   const [loading, setLoading] = React.useState(false);
+  const [inputFile, setInputFile] = React.useState();
 
   return (
     <ServiceContext.Provider
@@ -15,7 +16,9 @@ const ServiceProvider = ({ children }) => {
         finalDataInit,
         setFinalData,
         loading,
-        setLoading
+        setLoading,
+        inputFile,
+        setInputFile
       }}
     >
       {children}

@@ -15,9 +15,12 @@ import {
 import { ServiceContext } from "./DataService";
 
 function ColumnsCheckTable({ next }) {
-  const { setFinalData, columnMatchingData, setLoading } = React.useContext(
-    ServiceContext
-  );
+  const {
+    setFinalData,
+    columnMatchingData,
+    setColumnMatchingData,
+    setLoading
+  } = React.useContext(ServiceContext);
 
   const [columnMatching, dispatch] = React.useReducer(
     (state, action) =>
@@ -34,7 +37,7 @@ function ColumnsCheckTable({ next }) {
           default:
         }
       }),
-    JSON.parse(columnMatchingData)
+    columnMatchingData
   );
 
   const colums = Object.keys(columnMatching.results);
@@ -105,11 +108,12 @@ function ColumnsCheckTable({ next }) {
       <Button
         onClick={_ => {
           setLoading(true);
+          setColumnMatchingData(columnMatching);
           const r = {};
           Object.keys(columnMatching.results).forEach(
             k => (r[k] = columnMatching.results[k].column)
           );
-          fetch("http://localhost:5000/goodTitles", {
+          fetch("/api/goodTitles", {
             method: "POST",
             body: JSON.stringify(r),
             headers: {

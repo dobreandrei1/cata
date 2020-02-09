@@ -4,7 +4,7 @@ import { useDropzone } from "react-dropzone";
 import { ServiceContext } from "./DataService";
 
 function UploadArea({ name, next }) {
-  const { setColumnMatchingData, setLoading } = React.useContext(
+  const { setInputFile, setColumnMatchingData, setLoading } = React.useContext(
     ServiceContext
   );
   const onDrop = React.useCallback(
@@ -14,19 +14,24 @@ function UploadArea({ name, next }) {
       const data = new FormData();
       data.append("file", acceptedFiles[0]);
       data.append("type", name);
+      data.append("filename", acceptedFiles[0].name.split(".")[0]);
 
-      fetch("http://localhost:5000/titles", {
+      fetch("/api/titles", {
         method: "POST",
         body: data
       })
         .then(response => response.text())
         .then(body => {
-          setColumnMatchingData(body.replace(/NaN/g, "null"));
+          const json = JSON.parse(body.replace(/NaN/g, "null"));
+
+          setInputFile(json.filename);
+          setColumnMatchingData(json.data);
+
           next();
           setLoading(false);
         });
     },
-    [name, next, setColumnMatchingData, setLoading]
+    [name, next, setColumnMatchingData, setLoading, setInputFile]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });

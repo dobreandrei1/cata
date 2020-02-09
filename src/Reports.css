@@ -1,0 +1,7 @@
+.report {
+  padding: 10px;
+}
+
+.report.fixed {
+  background-color: #bbd5ae;
+}
