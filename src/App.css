@@ -1,0 +1,39 @@
+body {
+  background-color: #efefef;
+}
+
+.uploaders {
+  display: flex;
+}
+
+.uploadRow {
+  flex-grow: 1;
+  background-color: #dfdfdf;
+  margin: 10px;
+  text-align: center;
+  padding: 20px;
+}
+
+td.invalid {
+  background-color: red;
+}
+
+td.validated {
+  background-color: orange;
+}
+
+.uploadArea {
+  border: 2px dashed black;
+  padding: 20px;
+  cursor: pointer;
+}
+
+.wrapper {
+  padding: 10px;
+}
+
+.progressWrapper {
+  padding: 100px;
+  margin: auto;
+  width: 100px;
+}
